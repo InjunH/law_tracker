@@ -124,8 +124,8 @@ export class LawnbScraper {
             await new Promise(resolve => setTimeout(resolve, 1000)); // Rate limiting
           }
 
-          // 현재 페이지 파싱
-          const lawyers = await this.parsePage(page);
+          // 현재 페이지 파싱 (검색 키워드를 firmName으로 사용)
+          const lawyers = await this.parsePage(page, firmName);
           allLawyers.push(...lawyers);
 
           // 진행 상황 콜백
@@ -346,8 +346,10 @@ export class LawnbScraper {
 
   /**
    * 현재 페이지의 변호사 목록 파싱
+   * @param page Puppeteer Page 객체
+   * @param searchKeyword 검색에 사용된 키워드 (이 값이 firmName으로 사용됨)
    */
-  private async parsePage(page: Page): Promise<LawyerRawData[]> {
+  private async parsePage(page: Page, searchKeyword: string): Promise<LawyerRawData[]> {
     const html = await page.content();
     const $ = cheerio.load(html);
 
@@ -410,7 +412,7 @@ export class LawnbScraper {
           gender: birthMatch ? birthMatch[2] : null,
           examType,
           examNumber,
-          firmName: currentMatch[2],
+          firmName: searchKeyword, // 검색 키워드를 firmName으로 사용
           position: currentMatch[1],
           profileUrl
         });

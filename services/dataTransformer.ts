@@ -39,6 +39,42 @@ export interface TransformedLawyerData {
 }
 
 /**
+ * 로펌명 정규화
+ *
+ * 예시:
+ * - "법무법인(유) 세종 / 관세" → "세종"
+ * - "법무법인(유한) 광장" → "광장"
+ * - "김앤장 법률사무소" → "김앤장"
+ * - "법무법인 해담(안산분사무소)" → "해담"
+ */
+export function normalizeFirmName(firmName: string): string {
+  let normalized = firmName;
+
+  // 1. "/" 이후 팀/부서 정보 제거
+  const slashIndex = normalized.indexOf('/');
+  if (slashIndex !== -1) {
+    normalized = normalized.substring(0, slashIndex).trim();
+  }
+
+  // 2. 법인 형태 키워드 제거 (순서 중요: 긴 것부터)
+  normalized = normalized
+    .replace(/법무법인\(유한\)/g, '')
+    .replace(/법무법인\(유\)/g, '')
+    .replace(/법무법인/g, '')
+    .replace(/법률사무소/g, '')
+    .replace(/변호사무소/g, '')
+    .trim();
+
+  // 3. 괄호와 내용 제거 (분사무소, 안산분사무소 등)
+  normalized = normalized.replace(/\([^)]*\)/g, '').trim();
+
+  // 4. 연속된 공백을 하나로
+  normalized = normalized.replace(/\s+/g, ' ').trim();
+
+  return normalized;
+}
+
+/**
  * LawyerRawData를 Supabase 스키마에 맞게 변환
  */
 export function transformLawyerData(
