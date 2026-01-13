@@ -10,7 +10,6 @@ import FirmMovementSummary from '../components/FirmMovementSummary';
 import DirectoryPage from '../components/DirectoryPage';
 import MovementsPage from '../components/MovementsPage';
 import { fetchMovements, calculateDailyStats } from '../services/supabaseService';
-import { generateMockMovements, calculateStats } from '../services/mockDataService';
 import { MAJOR_FIRMS } from '../constants';
 import { Movement, DailyStats } from '../types';
 import { Briefcase, Scale, FileText } from 'lucide-react';
@@ -28,22 +27,12 @@ export default function HomePage() {
         // Supabase에서 실제 데이터 가져오기
         const movementsData = await fetchMovements(60);
 
-        // 데이터가 없으면 mock 데이터 사용 (fallback)
-        if (movementsData.length === 0) {
-          console.log('No movements data found, using mock data');
-          const mockData = generateMockMovements(60);
-          setMovements(mockData);
-          setStats(calculateStats(mockData));
-        } else {
-          setMovements(movementsData);
-          setStats(calculateDailyStats(movementsData));
-        }
+        setMovements(movementsData);
+        setStats(calculateDailyStats(movementsData));
       } catch (error) {
         console.error('Failed to load data:', error);
-        // 에러 시 mock 데이터 사용
-        const mockData = generateMockMovements(60);
-        setMovements(mockData);
-        setStats(calculateStats(mockData));
+        setMovements([]);
+        setStats([]);
       }
       setLoading(false);
     };
