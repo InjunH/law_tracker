@@ -1,18 +1,19 @@
+'use client'
 
 import React, { useState, useEffect } from 'react';
-import Layout from './components/Layout';
-import StatsCards from './components/StatsCards';
-import MovementTable from './components/MovementTable';
-import MovementChart from './components/MovementChart';
-import AIAssistant from './components/AIAssistant';
-import SystemMonitor from './components/SystemMonitor';
-import FirmMovementSummary from './components/FirmMovementSummary';
-import { generateMockMovements, calculateStats } from './services/mockDataService';
-import { MAJOR_FIRMS } from './constants';
-import { Movement, DailyStats } from './types';
+import Layout from '../components/Layout';
+import StatsCards from '../components/StatsCards';
+import MovementTable from '../components/MovementTable';
+import MovementChart from '../components/MovementChart';
+import AIAssistant from '../components/AIAssistant';
+import SystemMonitor from '../components/SystemMonitor';
+import FirmMovementSummary from '../components/FirmMovementSummary';
+import { generateMockMovements, calculateStats } from '../services/mockDataService';
+import { MAJOR_FIRMS } from '../constants';
+import { Movement, DailyStats } from '../types';
 import { ChevronRight, Briefcase, Loader2, Sparkles, Scale, FileText } from 'lucide-react';
 
-const App: React.FC = () => {
+export default function HomePage() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [movements, setMovements] = useState<Movement[]>([]);
   const [stats, setStats] = useState<DailyStats[]>([]);
@@ -57,7 +58,7 @@ const App: React.FC = () => {
         <div className="flex items-center gap-3">
           <div className="flex bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
              {['Daily', 'Weekly', 'Monthly'].map((period) => (
-               <button 
+               <button
                 key={period}
                 className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase tracking-widest transition-all ${
                   period === 'Daily' ? 'bg-slate-950 text-white' : 'text-slate-400 hover:text-slate-900'
@@ -81,10 +82,10 @@ const App: React.FC = () => {
           <MovementTable movements={movements.slice(0, 8)} />
           <FirmMovementSummary movements={movements} />
         </div>
-        
+
         <div className="space-y-10">
           <AIAssistant movements={movements} />
-          
+
           <div className="bg-white rounded-xl p-8 border border-slate-200 shadow-sm">
             <h3 className="font-bold text-base text-slate-900 mb-8 flex items-center justify-between">
               실시간 인력 수급 랭킹
@@ -150,7 +151,7 @@ const App: React.FC = () => {
           </div>
           <h3 className="text-xl font-bold text-slate-900 mb-2 tracking-tight">Access Restricted</h3>
           <p className="text-slate-400 text-sm font-medium">선택하신 모듈은 현재 데이터 정합성 검토 단계에 있습니다.</p>
-          <button 
+          <button
             onClick={() => setActiveTab('dashboard')}
             className="mt-10 text-slate-900 text-xs font-black uppercase tracking-[0.2em] hover:underline underline-offset-8"
           >
@@ -160,6 +161,4 @@ const App: React.FC = () => {
       )}
     </Layout>
   );
-};
-
-export default App;
+}

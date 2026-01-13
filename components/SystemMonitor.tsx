@@ -1,3 +1,4 @@
+'use client'
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -86,7 +87,7 @@ const SystemMonitor: React.FC = () => {
               <LogLine time="09:13:45" level="SUCCESS" msg="Synced 964 records to Supabase: 'lawyers_snapshot'" />
               <LogLine time="09:14:02" level="INFO" msg="Comparing snapshots: 2026-01-12 vs 2026-01-13" />
               <LogLine time="09:14:05" level="INFO" msg="3 movements detected. Updating 'movements' table..." />
-              <div className="text-emerald-500/50 animate-pulse mt-4">>> Waiting for next signal...</div>
+              <div className="text-emerald-500/50 animate-pulse mt-4">{'>> '}Waiting for next signal...</div>
             </div>
           </div>
         </div>
