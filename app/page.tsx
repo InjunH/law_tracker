@@ -53,7 +53,22 @@ export default function HomePage() {
     );
   }
 
-  const renderDashboard = () => (
+  const renderDashboard = () => {
+    // 로펌별 순이동 계산 (실시간 인력 수급 랭킹용)
+    const firmRankings = MAJOR_FIRMS.map(firm => {
+      const inflow = movements.filter(m => m.toFirm === firm.name).length;
+      const outflow = movements.filter(m => m.fromFirm === firm.name).length;
+      const netMovement = inflow - outflow;
+
+      return {
+        ...firm,
+        netMovement,
+        inflow,
+        outflow
+      };
+    }).sort((a, b) => b.netMovement - a.netMovement).slice(0, 5);
+
+    return (
     <div className="space-y-10 animate-in fade-in duration-1000">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 pb-4 border-b border-slate-200">
         <div>
@@ -99,7 +114,7 @@ export default function HomePage() {
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Week</span>
             </h3>
             <div className="space-y-6">
-              {MAJOR_FIRMS.slice(0, 5).map((firm, idx) => (
+              {firmRankings.map((firm, idx) => (
                 <div key={firm.id} className="flex items-center justify-between group cursor-pointer">
                   <div className="flex items-center gap-4">
                     <span className="text-xs font-black text-slate-300 w-4 italic">#{idx + 1}</span>
@@ -112,8 +127,19 @@ export default function HomePage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-black text-emerald-600">▲ 4</p>
-                    <p className="text-[9px] text-slate-300 font-bold uppercase">Points</p>
+                    {firm.netMovement !== 0 ? (
+                      <>
+                        <p className={`text-xs font-black ${firm.netMovement > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {firm.netMovement > 0 ? '▲' : '▼'} {Math.abs(firm.netMovement)}
+                        </p>
+                        <p className="text-[9px] text-slate-300 font-bold uppercase">Net</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-xs font-black text-slate-400">—</p>
+                        <p className="text-[9px] text-slate-300 font-bold uppercase">No Change</p>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -126,7 +152,8 @@ export default function HomePage() {
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
