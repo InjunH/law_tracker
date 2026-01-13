@@ -8,13 +8,15 @@ let supabaseInstance: SupabaseClient | null = null;
 // Supabase 클라이언트를 필요할 때만 생성 (lazy initialization)
 function getSupabase(): SupabaseClient {
   if (!supabaseInstance) {
+    // 브라우저 환경에서만 초기화
+    if (typeof window === 'undefined') {
+      throw new Error('Supabase client can only be initialized in browser');
+    }
+
     const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-    if (!SUPABASE_URL || !SUPABASE_KEY) {
-      throw new Error('Supabase credentials not found');
-    }
-
+    // 환경 변수가 없으면 빈 클라이언트 생성 (에러는 실제 사용 시 발생)
     supabaseInstance = createClient(SUPABASE_URL, SUPABASE_KEY);
   }
   return supabaseInstance;
