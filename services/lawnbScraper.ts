@@ -153,6 +153,75 @@ export class LawnbScraper {
   }
 
   /**
+   * 로펌의 총 변호사 수만 빠르게 확인 (첫 페이지만)
+   * 전체 스크래핑 없이 headcount 변동 감지용
+   */
+  async checkHeadcount(firmName: string): Promise<number> {
+    if (!this.browser) {
+      await this.init();
+    }
+
+    const page = await this.browser!.newPage();
+
+    try {
+      // 1. 검색 페이지로 이동
+      await page.goto(`${this.baseUrl}/Info/ContentMain/Lawyer`, {
+        waitUntil: 'networkidle2'
+      });
+
+      // 2. 검색 폼 로드 대기
+      await page.waitForSelector('#sWork', { timeout: 10000 });
+
+      // 3. 검색어 입력
+      await page.type('#sWork', firmName);
+
+      // 4. 검색 버튼 클릭
+      const searchButtonClicked = await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll('button, input[type="submit"], input[type="button"]'));
+        const searchButton = buttons.find(btn =>
+          btn.textContent?.includes('검색') ||
+          (btn as HTMLInputElement).value?.includes('검색')
+        );
+
+        if (searchButton) {
+          (searchButton as HTMLElement).click();
+          return true;
+        }
+        return false;
+      });
+
+      if (!searchButtonClicked) {
+        throw new Error('검색 버튼을 찾을 수 없습니다');
+      }
+
+      // 5. 페이지 네비게이션 대기
+      await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
+
+      // 6. AJAX 결과 로딩 대기
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // 7. "검색결과 1245 건" 텍스트에서 총 인원수 추출
+      const totalCount = await page.evaluate(() => {
+        const allDivs = Array.from(document.querySelectorAll('div'));
+        const resultDiv = allDivs.find(div =>
+          div.textContent?.includes('검색결과') && div.textContent?.includes('건')
+        );
+        const text = resultDiv?.textContent?.trim() || '';
+
+        // "검색결과 1245 건" 형식에서 1245 추출
+        const match = text.match(/검색결과\s+(\d+)\s+건/);
+        return match ? parseInt(match[1]) : 0;
+      });
+
+      console.log(`📊 [${firmName}] Total headcount: ${totalCount}`);
+      return totalCount;
+
+    } finally {
+      await page.close();
+    }
+  }
+
+  /**
    * 총 페이지 수 추출
    */
   private async getTotalPages(page: Page): Promise<number> {
@@ -187,37 +256,91 @@ export class LawnbScraper {
    * 특정 페이지로 이동
    */
   private async goToPage(page: Page, pageNum: number): Promise<void> {
-    // 페이지 링크 찾기 (DOM에서 직접 검색)
-    const linkFound = await page.evaluate((num) => {
-      const links = Array.from(document.querySelectorAll('a'));
-      const pageLink = links.find(link => link.textContent?.trim() === String(num));
-      if (pageLink) {
-        (pageLink as HTMLAnchorElement).click();
-        return true;
-      }
-      return false;
-    }, pageNum);
+    // 현재 페이지 번호 확인
+    const getCurrentPage = async (): Promise<number> => {
+      return await page.evaluate(() => {
+        const allDivs = Array.from(document.querySelectorAll('div'));
+        const resultDiv = allDivs.find(div =>
+          div.textContent?.includes('검색결과') && div.textContent?.includes('건')
+        );
+        const text = resultDiv?.textContent || '';
+        const match = text.match(/(\d+)\s*\/\s*(\d+)/);
+        return match ? parseInt(match[1]) : 1;
+      });
+    };
 
-    if (linkFound) {
-      // 페이지 번호가 변경될 때까지 대기 (AJAX 방식, 네비게이션 없음)
-      await page.waitForFunction(
-        (expectedPage) => {
-          const allDivs = Array.from(document.querySelectorAll('div'));
-          const resultDiv = allDivs.find(div =>
-            div.textContent?.includes('검색결과') && div.textContent?.includes('건')
-          );
-          const text = resultDiv?.textContent || '';
-          const match = text.match(/(\d+)\s*\/\s*(\d+)/);
-          return match && match[1] === String(expectedPage);
-        },
-        { timeout: 10000 },
-        pageNum
-      );
+    let currentPage = await getCurrentPage();
+
+    // 목표 페이지에 도달할 때까지 반복
+    while (currentPage < pageNum) {
+      // 1. 먼저 직접 페이지 링크가 있는지 확인
+      const directLinkFound = await page.evaluate((targetPage) => {
+        // navigationLinks 내의 페이지 링크 찾기
+        const pageLinks = Array.from(document.querySelectorAll('.navigationLinks a.navPages, .navigationLinks a'));
+        const targetLink = pageLinks.find(link =>
+          link.textContent?.trim() === String(targetPage)
+        );
+
+        if (targetLink) {
+          (targetLink as HTMLAnchorElement).click();
+          return true;
+        }
+        return false;
+      }, pageNum);
+
+      if (directLinkFound) {
+        // 직접 링크를 찾아서 클릭한 경우
+        await page.waitForFunction(
+          (expectedPage) => {
+            const allDivs = Array.from(document.querySelectorAll('div'));
+            const resultDiv = allDivs.find(div =>
+              div.textContent?.includes('검색결과') && div.textContent?.includes('건')
+            );
+            const text = resultDiv?.textContent || '';
+            const match = text.match(/(\d+)\s*\/\s*(\d+)/);
+            return match && match[1] === String(expectedPage);
+          },
+          { timeout: 10000 },
+          pageNum
+        );
+        break;
+      } else {
+        // 2. 직접 링크가 없으면 navNext 버튼 클릭
+        const nextClicked = await page.evaluate(() => {
+          const nextButton = document.querySelector('.navigationLinks a.navNext');
+          if (nextButton) {
+            (nextButton as HTMLAnchorElement).click();
+            return true;
+          }
+          return false;
+        });
+
+        if (!nextClicked) {
+          throw new Error(`페이지 ${pageNum}로 이동할 수 없습니다 (navNext 버튼 없음)`);
+        }
+
+        // 페이지가 변경될 때까지 대기
+        const previousPage = currentPage;
+        await page.waitForFunction(
+          (prevPage) => {
+            const allDivs = Array.from(document.querySelectorAll('div'));
+            const resultDiv = allDivs.find(div =>
+              div.textContent?.includes('검색결과') && div.textContent?.includes('건')
+            );
+            const text = resultDiv?.textContent || '';
+            const match = text.match(/(\d+)\s*\/\s*(\d+)/);
+            return match && parseInt(match[1]) > prevPage;
+          },
+          { timeout: 10000 },
+          previousPage
+        );
+
+        // 현재 페이지 업데이트
+        currentPage = await getCurrentPage();
+      }
 
       // AJAX 결과 로딩 완료 대기
       await new Promise(resolve => setTimeout(resolve, 1000));
-    } else {
-      throw new Error(`페이지 ${pageNum} 링크를 찾을 수 없습니다`);
     }
   }
 

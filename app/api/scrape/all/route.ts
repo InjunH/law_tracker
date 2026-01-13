@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { LawnbScraper, ScrapingProgress } from '@/services/lawnbScraper';
 import { transformLawyersData, separateLawyerData, filterValidLawyers } from '@/services/dataTransformer';
+import { HeadcountChecker, HeadcountComparison } from '@/services/headcountChecker';
 
 // Supabase 클라이언트
 const supabase = createClient(
@@ -14,21 +15,21 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// 13개 주요 로펌 목록
+// 13개 주요 로펌 목록 (규모순)
 const MAJOR_FIRMS = [
-  '김앤장',
-  '광장',
-  '태평양',
-  '율촌',
-  '화우',
-  '세종',
-  '바른',
-  '지평',
-  '클라스',
-  '동인',
-  '원',
-  '해담',
-  '케이엘'
+  '김앤장',    // ~960명
+  '광장',      // ~570명
+  '세종',      // ~510명
+  '태평양',    // ~500명
+  '율촌',      // ~410명
+  '화우',      // ~330명
+  '바른',      // ~200명
+  '지평',      // ~150명
+  '와이케이',  // 50~150명
+  '대륜',      // 50~150명
+  '대륙아주',  // 50~150명
+  '동인',      // 50~150명
+  '로고스'     // 50~150명
 ];
 
 interface FirmScrapingResult {
@@ -50,18 +51,73 @@ interface FirmScrapingResult {
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   const results: FirmScrapingResult[] = [];
+  let headcountChecks: HeadcountComparison[] = [];
+  let changedFirms: HeadcountComparison[] = [];
 
   try {
-    console.log('🚀 Starting full scrape for all major law firms\n');
+    console.log('🚀 Starting smart scrape for all major law firms\n');
+    console.log('📊 Phase 1: Headcount Check (fast)\n');
 
     const scraper = new LawnbScraper();
     await scraper.init();
 
+    const headcountChecker = new HeadcountChecker(supabase);
+
+    // Phase 1: 빠른 headcount 체크 (13개 로펌, 약 1-2분)
+    headcountChecks = [];
     for (const firmName of MAJOR_FIRMS) {
+      try {
+        console.log(`🔍 Checking ${firmName}...`);
+        const currentCount = await scraper.checkHeadcount(firmName);
+        const comparison = await headcountChecker.compareHeadcount(firmName, currentCount);
+        headcountChecker.logComparison(comparison);
+        headcountChecks.push(comparison);
+
+        // Rate limiting
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.error(`❌ Headcount check failed for ${firmName}:`, error instanceof Error ? error.message : error);
+        headcountChecks.push({
+          firmName,
+          currentCount: 0,
+          previousCount: 0,
+          hasChanged: true, // 오류 시 스크래핑 시도
+          difference: 0
+        });
+      }
+    }
+
+    // Phase 2: 변동이 있는 로펌만 전체 스크래핑
+    changedFirms = headcountChecker.filterChangedFirms(headcountChecks);
+    headcountChecker.logSummary(headcountChecks);
+
+    if (changedFirms.length === 0) {
+      console.log('✅ No changes detected. Skipping full scrape.\n');
+      await scraper.close();
+
+      return NextResponse.json({
+        success: true,
+        summary: {
+          totalFirms: MAJOR_FIRMS.length,
+          checkedCount: headcountChecks.length,
+          changedCount: 0,
+          skippedCount: MAJOR_FIRMS.length,
+          totalLawyers: 0,
+          duration: Date.now() - startTime
+        },
+        headcountChecks,
+        results: []
+      });
+    }
+
+    console.log(`\n🏢 Phase 2: Full Scrape (${changedFirms.length} firms with changes)\n`);
+
+    for (const comparison of changedFirms) {
+      const firmName = comparison.firmName;
       const firmStartTime = Date.now();
 
       try {
-        console.log(`\n🏢 Scraping: ${firmName}`);
+        console.log(`\n🏢 Scraping: ${firmName} (${comparison.difference > 0 ? '+' : ''}${comparison.difference})`);
         console.log('─'.repeat(60));
 
         const scrapedAt = new Date();
@@ -143,20 +199,27 @@ export async function POST(request: NextRequest) {
     const totalScraped = results.reduce((sum, r) => sum + (r.scraped?.valid || 0), 0);
 
     console.log('\n' + '═'.repeat(60));
-    console.log(`\n✅ Scraping complete!`);
-    console.log(`   - Success: ${successCount}/${MAJOR_FIRMS.length} firms`);
-    console.log(`   - Total lawyers: ${totalScraped}`);
+    console.log(`\n✅ Smart scraping complete!`);
+    console.log(`   - Checked: ${MAJOR_FIRMS.length} firms`);
+    console.log(`   - Changed: ${changedFirms.length} firms`);
+    console.log(`   - Skipped: ${MAJOR_FIRMS.length - changedFirms.length} firms`);
+    console.log(`   - Scraped successfully: ${successCount}/${changedFirms.length} changed firms`);
+    console.log(`   - Total lawyers updated: ${totalScraped}`);
     console.log(`   - Duration: ${(totalDuration / 1000 / 60).toFixed(1)} minutes\n`);
 
     return NextResponse.json({
       success: true,
       summary: {
         totalFirms: MAJOR_FIRMS.length,
+        checkedCount: headcountChecks.length,
+        changedCount: changedFirms.length,
+        skippedCount: MAJOR_FIRMS.length - changedFirms.length,
         successCount,
-        failureCount: MAJOR_FIRMS.length - successCount,
+        failureCount: changedFirms.length - successCount,
         totalLawyers: totalScraped,
         duration: totalDuration
       },
+      headcountChecks,
       results
     });
 
