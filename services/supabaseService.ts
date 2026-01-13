@@ -1,12 +1,37 @@
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Movement, DailyStats } from '../types';
 
-// 클라이언트 사이드에서 실행되므로 NEXT_PUBLIC_ 접두사 필요
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+// Lazy initialization을 위한 클라이언트 캐시
+let supabaseInstance: SupabaseClient | null = null;
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+// Supabase 클라이언트를 필요할 때만 생성 (lazy initialization)
+function getSupabase(): SupabaseClient {
+  if (!supabaseInstance) {
+    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      throw new Error('Supabase credentials not found');
+    }
+
+    supabaseInstance = createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+  return supabaseInstance;
+}
+
+// Supabase 클라이언트 export (lazy initialization 사용)
+export const supabase = {
+  get from() {
+    return getSupabase().from.bind(getSupabase());
+  },
+  get auth() {
+    return getSupabase().auth;
+  },
+  get storage() {
+    return getSupabase().storage;
+  }
+} as any;
 
 export interface SystemLog {
   id: string;
@@ -21,7 +46,7 @@ export interface SystemLog {
  */
 export const fetchMovements = async (limit: number = 60): Promise<Movement[]> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('movements')
       .select('*')
       .order('detected_at', { ascending: false })
@@ -91,7 +116,7 @@ export const calculateDailyStats = (movements: Movement[]): DailyStats[] => {
  */
 export const fetchFirmHeadcounts = async (): Promise<Record<string, number>> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('firm_headcount')
       .select('firm_name, lawyer_count');
 
@@ -125,7 +150,7 @@ export const fetchCurrentLawyers = async (
   offset: number = 0
 ) => {
   try {
-    let query = supabase
+    let query = getSupabase()
       .from('lawyer_positions')
       .select(`
         id,
@@ -201,7 +226,7 @@ export const fetchFirmMovementStats = async (days: number = 30) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('movements')
       .select('*')
       .gte('detected_at', startDate.toISOString());
@@ -255,7 +280,7 @@ export const fetchFirmHeadcountHistory = async (
 ) => {
   try {
     // 1. 현재 인원 조회
-    const { data: currentData } = await supabase
+    const { data: currentData } = await getSupabase()
       .from('lawyer_positions')
       .select('lawyer_sid')
       .eq('firm_name', firmName)
@@ -267,7 +292,7 @@ export const fetchFirmHeadcountHistory = async (
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const { data: movements } = await supabase
+    const { data: movements } = await getSupabase()
       .from('movements')
       .select('*')
       .gte('detected_at', startDate.toISOString())
