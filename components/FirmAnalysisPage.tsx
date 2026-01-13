@@ -11,7 +11,6 @@ import FirmDetailSection from './FirmDetailSection';
 export default function FirmAnalysisPage() {
   const [selectedFirm, setSelectedFirm] = useState<string | null>(null);
   const [firmStats, setFirmStats] = useState<Record<string, FirmStats>>({});
-  const [tierFilter, setTierFilter] = useState<'all' | 'TIER_1' | 'TIER_2' | 'TIER_3'>('all');
   const [sortBy, setSortBy] = useState<'netChange' | 'headcount' | 'name'>('netChange');
   const [loading, setLoading] = useState(true);
 
@@ -49,17 +48,9 @@ export default function FirmAnalysisPage() {
     initData();
   }, []);
 
-  // 필터링 및 정렬
-  const filteredAndSortedFirms = useMemo(() => {
-    let filtered = MAJOR_FIRMS;
-
-    // Tier 필터
-    if (tierFilter !== 'all') {
-      filtered = filtered.filter(firm => firm.tier === tierFilter.replace('_', ' '));
-    }
-
-    // 정렬
-    const sorted = [...filtered].sort((a, b) => {
+  // 정렬
+  const sortedFirms = useMemo(() => {
+    const sorted = [...MAJOR_FIRMS].sort((a, b) => {
       const statsA = firmStats[a.name];
       const statsB = firmStats[b.name];
 
@@ -78,7 +69,7 @@ export default function FirmAnalysisPage() {
     });
 
     return sorted;
-  }, [tierFilter, sortBy, firmStats]);
+  }, [sortBy, firmStats]);
 
   if (loading) {
     return (
@@ -108,25 +99,8 @@ export default function FirmAnalysisPage() {
         </div>
       </div>
 
-      {/* 필터 바 */}
+      {/* 정렬 바 */}
       <div className="flex flex-wrap gap-4 items-center">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tier</span>
-          <div className="flex bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
-            {(['all', 'TIER_1', 'TIER_2', 'TIER_3'] as const).map((tier) => (
-              <button
-                key={tier}
-                onClick={() => setTierFilter(tier)}
-                className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase tracking-widest transition-all ${
-                  tierFilter === tier ? 'bg-slate-950 text-white' : 'text-slate-400 hover:text-slate-900'
-                }`}
-              >
-                {tier === 'all' ? 'All' : tier.replace('_', ' ')}
-              </button>
-            ))}
-          </div>
-        </div>
-
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">정렬</span>
           <div className="flex bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
@@ -151,7 +125,7 @@ export default function FirmAnalysisPage() {
 
       {/* 로펌 비교 그리드 */}
       <FirmComparisonGrid
-        firms={filteredAndSortedFirms}
+        firms={sortedFirms}
         firmStats={firmStats}
         selectedFirm={selectedFirm}
         onSelectFirm={setSelectedFirm}
