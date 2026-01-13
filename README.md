@@ -1,20 +1,119 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Law Firm Movement Tracker
 
-# Run and deploy your AI Studio app
+대한민국 주요 13개 로펌의 변호사 이동(입사/퇴사/이직)을 실시간으로 추적하고 분석하는 지능형 대시보드
 
-This contains everything you need to run your app locally.
+## 기술 스택
 
-View your app in AI Studio: https://ai.studio/apps/drive/1oCe01jdwKlbg__nj7BG5BofGRazDal8G
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Charts**: Recharts
+- **AI**: Google Gemini API
+- **Backend**: Supabase
+- **Icons**: Lucide React
 
-## Run Locally
+## 프로젝트 구조
 
-**Prerequisites:**  Node.js
+```
+law_tracker/
+├── app/                    # Next.js App Router
+│   ├── layout.tsx          # 루트 레이아웃
+│   ├── page.tsx            # 메인 페이지
+│   ├── globals.css         # 전역 스타일
+│   └── api/                # API 라우트
+├── components/             # UI 컴포넌트
+│   ├── Layout.tsx          # 메인 레이아웃
+│   ├── StatsCards.tsx      # 통계 카드
+│   ├── MovementChart.tsx   # 시계열 차트
+│   ├── MovementTable.tsx   # 이동 내역 테이블
+│   ├── FirmMovementSummary.tsx  # 법인별 현황
+│   ├── AIAssistant.tsx     # AI 분석 리포트
+│   └── SystemMonitor.tsx   # 시스템 모니터링
+├── services/               # 비즈니스 로직
+│   ├── mockDataService.ts  # 목 데이터
+│   ├── gemini.ts           # Gemini AI 통합
+│   └── supabaseService.ts  # Supabase 연동
+├── lib/                    # 유틸리티
+│   └── supabase.ts         # Supabase 클라이언트
+├── types.ts                # 타입 정의
+└── constants.tsx           # 상수 (13개 법인 데이터)
+```
 
+## 주요 기능
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### 1. 실시간 이동 추적
+- 변호사 JOIN/LEAVE/TRANSFER 감지
+- 일일 통계 및 트렌드 분석
+
+### 2. 시장 분석 대시보드
+- 법인별 인력 수급 현황
+- 실시간 인력 수급 랭킹
+- 시계열 차트 시각화
+
+### 3. AI 인텔리전스
+- Google Gemini 기반 시장 트렌드 분석
+- 자동 인사이트 생성
+
+### 4. 시스템 모니터링
+- 크롤러/DB 상태 확인
+- 성능 메트릭 모니터링
+- 실시간 로그 추적
+
+## 대상 법인 (13개)
+
+| Tier | 법인 | 변호사 수 |
+|------|------|----------|
+| **Tier 1** | 김앤장, 광장, 태평양, 세종, 율촌 | 410-960명 |
+| **Tier 2** | 화우, 바른, 지평 | 150-330명 |
+| **Tier 3** | 와이케이, 대륙아주, 대륜, 동인, 로고스 | 70-100명 |
+
+## 설치 및 실행
+
+### 1. 의존성 설치
+```bash
+npm install
+```
+
+### 2. 환경 변수 설정
+`.env.local` 파일을 생성하고 다음 변수를 설정하세요:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### 3. 개발 서버 실행
+```bash
+npm run dev
+```
+
+서버는 [http://localhost:3000](http://localhost:3000)에서 실행됩니다.
+
+### 4. 프로덕션 빌드
+```bash
+npm run build
+npm start
+```
+
+## 개발 상태
+
+### ✅ 구현 완료
+- UI 컴포넌트 (대시보드, 차트, 테이블)
+- Google Gemini AI 통합
+- Mock 데이터 서비스 (60일 치)
+- Supabase 클라이언트 설정
+- Next.js App Router 구조
+
+### 🔄 개발 중
+- Supabase DB 연동
+- 실제 데이터 크롤러
+- API 라우트 구현
+
+## 라이선스
+
+Private
+
+## 기여
+
+이 프로젝트는 비공개 프로젝트입니다.
