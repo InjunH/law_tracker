@@ -1,17 +1,13 @@
 'use client'
 
 import React from 'react';
-import { 
-  LayoutDashboard, 
-  Users, 
-  ArrowRightLeft, 
-  TrendingUp, 
-  Settings, 
-  Bell,
-  Search,
+import {
+  LayoutDashboard,
+  Users,
+  ArrowRightLeft,
+  TrendingUp,
   Scale,
-  Activity,
-  ChevronDown
+  Activity
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -25,8 +21,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
     { id: 'dashboard', label: '시장 요약', icon: LayoutDashboard },
     { id: 'movements', label: '이직 히스토리', icon: ArrowRightLeft },
     { id: 'firms', label: '법인별 분석', icon: TrendingUp },
-    { id: 'monitor', label: '데이터 관제', icon: Activity },
     { id: 'directory', label: '법조인 명부', icon: Users },
+    ...(process.env.NODE_ENV === 'development' ? [{ id: 'monitor', label: '데이터 관제', icon: Activity }] : []),
   ];
 
   return (
@@ -62,58 +58,15 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
             </button>
           ))}
         </nav>
-
-        <div className="p-6">
-          <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-800/50 mb-4">
-            <div className="flex items-center justify-between mb-2">
-               <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Network Status</span>
-               <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
-            </div>
-            <p className="text-xs text-slate-300 font-semibold tracking-tight">Enterprise Gateway 04</p>
-          </div>
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-white transition-colors text-sm font-medium">
-            <Settings size={18} />
-            시스템 설정
-          </button>
-        </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-10 z-10">
-          <div className="relative w-80">
-            <Search className="absolute left-0 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input 
-              type="text" 
-              placeholder="변호사명 또는 로펌 검색..."
-              className="w-full bg-transparent border-none py-2 pl-7 pr-4 text-sm focus:ring-0 transition-all placeholder:text-slate-400 font-medium"
-            />
-          </div>
-          
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-end px-10 z-10">
           <div className="flex items-center gap-6">
-            <div className="hidden lg:flex flex-col items-end gap-0.5">
+            <div className="flex flex-col items-end gap-0.5">
                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Latest Update</span>
                <span className="text-xs text-slate-900 font-bold">2026.01.13 00:12:04</span>
-            </div>
-            
-            <div className="h-8 w-[1px] bg-slate-200"></div>
-
-            <div className="flex items-center gap-4">
-              <button className="p-2 text-slate-400 hover:text-slate-900 transition-colors relative">
-                <Bell size={18} />
-                <span className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-amber-600 rounded-full ring-2 ring-white"></span>
-              </button>
-              
-              <button className="flex items-center gap-3 group">
-                <div className="text-right hidden sm:block">
-                  <p className="text-xs font-bold text-slate-900">관리자 계정</p>
-                  <p className="text-[10px] text-slate-500 font-medium">Master Admin</p>
-                </div>
-                <div className="w-9 h-9 rounded-lg bg-slate-950 flex items-center justify-center text-amber-500 font-bold text-xs shadow-lg border border-slate-800">
-                  AD
-                </div>
-                <ChevronDown size={14} className="text-slate-400 group-hover:text-slate-900 transition-colors" />
-              </button>
             </div>
           </div>
         </header>
