@@ -13,20 +13,22 @@ import FirmAnalysisPage from '../components/FirmAnalysisPage';
 import { fetchMovements, calculateDailyStats } from '../services/supabaseService';
 import { MAJOR_FIRMS } from '../constants';
 import { Movement, DailyStats } from '../types';
-import { Briefcase, Scale, FileText } from 'lucide-react';
+import { Briefcase, Scale } from 'lucide-react';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [movements, setMovements] = useState<Movement[]>([]);
   const [stats, setStats] = useState<DailyStats[]>([]);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
 
   useEffect(() => {
     const initData = async () => {
       setLoading(true);
       try {
-        // Supabase에서 실제 데이터 가져오기
-        const movementsData = await fetchMovements(60);
+        // 기간에 따라 다른 일수의 데이터 가져오기
+        const days = period === 'daily' ? 30 : period === 'weekly' ? 84 : 180;
+        const movementsData = await fetchMovements(days);
 
         setMovements(movementsData);
         setStats(calculateDailyStats(movementsData));
@@ -38,7 +40,7 @@ export default function HomePage() {
       setLoading(false);
     };
     initData();
-  }, []);
+  }, [period]);
 
   if (loading) {
     return (
@@ -80,22 +82,18 @@ export default function HomePage() {
           <h2 className="text-3xl font-bold tracking-tight text-slate-950">변호사 영입 및 이직 분석 리포트</h2>
           <p className="text-slate-500 mt-1 text-sm font-medium">대한민국 주요 13개 로펌의 인력 변동을 실시간으로 추적합니다.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
-             {['Daily', 'Weekly', 'Monthly'].map((period) => (
-               <button
-                key={period}
-                className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase tracking-widest transition-all ${
-                  period === 'Daily' ? 'bg-slate-950 text-white' : 'text-slate-400 hover:text-slate-900'
-                }`}
-               >
-                 {period}
-               </button>
-             ))}
-          </div>
-          <button className="flex items-center gap-2 bg-slate-900 text-amber-500 px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest shadow-xl shadow-slate-900/10 hover:bg-slate-800 transition-all border border-slate-800">
-            <FileText size={14} /> PDF Export
-          </button>
+        <div className="flex bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
+          {(['daily', 'weekly', 'monthly'] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase tracking-widest transition-all ${
+                period === p ? 'bg-slate-950 text-white' : 'text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              {p === 'daily' ? 'Daily' : p === 'weekly' ? 'Weekly' : 'Monthly'}
+            </button>
+          ))}
         </div>
       </div>
 
