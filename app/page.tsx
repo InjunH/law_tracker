@@ -9,6 +9,7 @@ import SystemMonitor from '../components/SystemMonitor';
 import FirmMovementSummary from '../components/FirmMovementSummary';
 import DirectoryPage from '../components/DirectoryPage';
 import MovementsPage from '../components/MovementsPage';
+import FirmAnalysisPage from '../components/FirmAnalysisPage';
 import { fetchMovements, calculateDailyStats } from '../services/supabaseService';
 import { MAJOR_FIRMS } from '../constants';
 import { Movement, DailyStats } from '../types';
@@ -159,9 +160,10 @@ export default function HomePage() {
     <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
       {activeTab === 'dashboard' && renderDashboard()}
       {activeTab === 'movements' && <MovementsPage initialMovements={movements} />}
+      {activeTab === 'firms' && <FirmAnalysisPage />}
       {activeTab === 'monitor' && <SystemMonitor />}
       {activeTab === 'directory' && <DirectoryPage />}
-      {activeTab !== 'dashboard' && activeTab !== 'movements' && activeTab !== 'monitor' && activeTab !== 'directory' && (
+      {!['dashboard', 'movements', 'firms', 'monitor', 'directory'].includes(activeTab) && (
         <div className="flex flex-col items-center justify-center h-[60vh] text-slate-300 animate-in fade-in duration-700">
           <div className="p-10 rounded-full border-2 border-slate-100 mb-8">
             <Briefcase size={48} className="text-slate-200" />
