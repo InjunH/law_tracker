@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js';
 import { LawnbScraper, ScrapingProgress } from '@/services/lawnbScraper';
 import { transformLawyersData, separateLawyerData, filterValidLawyers } from '@/services/dataTransformer';
 import { HeadcountChecker, HeadcountComparison } from '@/services/headcountChecker';
+import { MovementDetector } from '@/services/movementDetector';
 
 // Supabase 클라이언트
 const supabase = createClient(
@@ -139,6 +140,17 @@ export async function POST(request: NextRequest) {
         const transformed = transformLawyersData(valid, scrapedAt);
         const { lawyers, positions } = separateLawyerData(transformed);
 
+        // 이동 감지
+        const movementDetector = new MovementDetector(supabase);
+        const movementResult = await movementDetector.detectMovements(firmName, valid);
+
+        if (movementResult.movements.length > 0) {
+          console.log(`📊 Detected movements for ${firmName}:`);
+          console.log(`   - LEAVE: ${movementResult.leaves}`);
+          console.log(`   - JOIN: ${movementResult.joins}`);
+          console.log(`   - TRANSFER: ${movementResult.transfers}`);
+        }
+
         // Supabase에 저장
         const { error: lawyersError } = await supabase
           .from('lawyers')
@@ -154,6 +166,25 @@ export async function POST(request: NextRequest) {
           .insert(positions);
 
         if (positionsError) throw positionsError;
+
+        // 이동 기록 저장
+        if (movementResult.movements.length > 0) {
+          const { error: movementsError } = await supabase
+            .from('movements')
+            .insert(movementResult.movements);
+
+          if (movementsError) throw movementsError;
+        }
+
+        // 퇴사자 is_current 플래그 업데이트
+        if (movementResult.positionsToUpdate.length > 0) {
+          const { error: updateError } = await supabase
+            .from('lawyer_positions')
+            .update({ is_current: false, end_date: scrapedAt })
+            .in('id', movementResult.positionsToUpdate);
+
+          if (updateError) throw updateError;
+        }
 
         const duration = Date.now() - firmStartTime;
 
