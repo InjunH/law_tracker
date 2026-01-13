@@ -191,3 +191,116 @@ export const fetchLogs = async (): Promise<SystemLog[]> => {
     { id: '4', level: 'info', message: '일일 리포트 알림 발송 완료', timestamp: new Date().toISOString() },
   ];
 };
+
+/**
+ * 로펌별 이동 통계 (최근 N일)
+ * 각 로펌의 입사, 퇴사, 순변동 집계
+ */
+export const fetchFirmMovementStats = async (days: number = 30) => {
+  try {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const { data, error } = await supabase
+      .from('movements')
+      .select('*')
+      .gte('detected_at', startDate.toISOString());
+
+    if (error) throw error;
+
+    // 로펌별 집계
+    const stats: Record<string, { joins: number; leaves: number; net: number }> = {};
+
+    data?.forEach((movement: any) => {
+      const toFirm = movement.to_firm;
+      const fromFirm = movement.from_firm;
+
+      // 입사
+      if (toFirm && movement.movement_type === 'join') {
+        if (!stats[toFirm]) stats[toFirm] = { joins: 0, leaves: 0, net: 0 };
+        stats[toFirm].joins++;
+        stats[toFirm].net++;
+      }
+
+      // 퇴사
+      if (fromFirm && movement.movement_type === 'leave') {
+        if (!stats[fromFirm]) stats[fromFirm] = { joins: 0, leaves: 0, net: 0 };
+        stats[fromFirm].leaves++;
+        stats[fromFirm].net--;
+      }
+
+      // 이직 (from에서 -1, to에서 +1)
+      if (movement.movement_type === 'transfer' && fromFirm && toFirm) {
+        if (!stats[fromFirm]) stats[fromFirm] = { joins: 0, leaves: 0, net: 0 };
+        if (!stats[toFirm]) stats[toFirm] = { joins: 0, leaves: 0, net: 0 };
+        stats[fromFirm].net--;
+        stats[toFirm].net++;
+      }
+    });
+
+    return stats;
+  } catch (error) {
+    console.error('Failed to fetch firm movement stats:', error);
+    return {};
+  }
+};
+
+/**
+ * 로펌의 일별 변호사 수 추세 (간소화 - 계산 방식)
+ * MVP: movements 데이터로부터 역산
+ */
+export const fetchFirmHeadcountHistory = async (
+  firmName: string,
+  days: number = 30
+) => {
+  try {
+    // 1. 현재 인원 조회
+    const { data: currentData } = await supabase
+      .from('lawyer_positions')
+      .select('lawyer_sid')
+      .eq('firm_name', firmName)
+      .eq('is_current', true);
+
+    const currentCount = currentData?.length || 0;
+
+    // 2. 최근 N일간의 movements 조회
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const { data: movements } = await supabase
+      .from('movements')
+      .select('*')
+      .gte('detected_at', startDate.toISOString())
+      .or(`from_firm.eq.${firmName},to_firm.eq.${firmName}`)
+      .order('detected_at', { ascending: true });
+
+    // 3. 일별 변화 계산 (역산)
+    const dailyChanges: Record<string, number> = {};
+    movements?.forEach((m: any) => {
+      const date = m.detected_at.split('T')[0];
+      if (!dailyChanges[date]) dailyChanges[date] = 0;
+
+      if (m.to_firm === firmName) dailyChanges[date]++;
+      if (m.from_firm === firmName) dailyChanges[date]--;
+    });
+
+    // 4. 일별 누적 계산
+    const trendData: { date: string; count: number }[] = [];
+    let runningCount = currentCount;
+
+    // 오늘부터 역순으로 계산
+    for (let i = 0; i < days; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+
+      trendData.unshift({ date: dateStr, count: runningCount });
+      runningCount -= (dailyChanges[dateStr] || 0);
+    }
+
+    return trendData;
+  } catch (error) {
+    console.error('Failed to fetch firm headcount history:', error);
+    return [];
+  }
+};

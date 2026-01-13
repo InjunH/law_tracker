@@ -43,3 +43,16 @@ export interface SystemStatus {
   cpuUsage: number;
   memoryUsage: number;
 }
+
+export interface FirmStats {
+  firmName: string;
+  current: number;
+  joins: number;
+  leaves: number;
+  net: number;
+}
+
+export interface TrendData {
+  date: string;
+  count: number;
+}
