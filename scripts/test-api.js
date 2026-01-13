@@ -9,14 +9,14 @@ const axios = require('axios');
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3200';
 
-async function testSingleFirmScrape() {
+async function testSingleFirmScrape(firmName = '김앤장', maxPages = undefined) {
   console.log('🧪 Testing Single Firm Scrape API\n');
   console.log('─'.repeat(60));
 
   try {
     const response = await axios.post(`${BASE_URL}/api/scrape`, {
-      firmName: '김앤장',
-      maxPages: 2  // 테스트용: 2페이지만 스크래핑 (전체는 undefined 또는 제거)
+      firmName,
+      maxPages  // undefined면 전체 페이지 스크래핑
     }, {
       timeout: 300000 // 5 minutes
     });
@@ -107,19 +107,23 @@ async function testAllFirmsScrape() {
 async function main() {
   const args = process.argv.slice(2);
   const testType = args[0] || 'single';
+  const firmName = args[1];
+  const maxPages = args[2] ? parseInt(args[2]) : undefined;
 
   console.log('🚀 Lawnb API Test Suite');
   console.log(`📍 Server: ${BASE_URL}\n`);
 
   if (testType === 'single') {
-    await testSingleFirmScrape();
+    await testSingleFirmScrape(firmName, maxPages);
   } else if (testType === 'all') {
     await testAllFirmsScrape();
   } else {
     console.error('❌ Invalid test type. Use "single" or "all"');
     console.log('\nUsage:');
-    console.log('  node scripts/test-api.js single  # Test single firm (김앤장)');
-    console.log('  node scripts/test-api.js all     # Test all 13 firms\n');
+    console.log('  node scripts/test-api.js single [firmName] [maxPages]  # Test single firm');
+    console.log('  node scripts/test-api.js single 세종                    # Test 세종 (all pages)');
+    console.log('  node scripts/test-api.js single 김앤장 2                # Test 김앤장 (2 pages only)');
+    console.log('  node scripts/test-api.js all                           # Test all 13 firms\n');
     process.exit(1);
   }
 }

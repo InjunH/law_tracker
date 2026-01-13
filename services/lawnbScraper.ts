@@ -300,7 +300,7 @@ export class LawnbScraper {
             const match = text.match(/(\d+)\s*\/\s*(\d+)/);
             return match && match[1] === String(expectedPage);
           },
-          { timeout: 10000 },
+          { timeout: 30000 },
           pageNum
         );
         break;
@@ -331,7 +331,7 @@ export class LawnbScraper {
             const match = text.match(/(\d+)\s*\/\s*(\d+)/);
             return match && parseInt(match[1]) > prevPage;
           },
-          { timeout: 10000 },
+          { timeout: 30000 },
           previousPage
         );
 
