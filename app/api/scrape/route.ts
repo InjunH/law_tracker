@@ -8,13 +8,12 @@ import { createClient } from '@supabase/supabase-js';
 import { LawnbScraper, ScrapingProgress } from '@/services/lawnbScraper';
 import { transformLawyersData, separateLawyerData, filterValidLawyers } from '@/services/dataTransformer';
 
-// Supabase 클라이언트 (Service Role Key 사용 - RLS 우회)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 export async function POST(request: NextRequest) {
+  // Supabase 클라이언트 생성 (런타임에만 실행)
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   const logs: string[] = [];
 
   try {
