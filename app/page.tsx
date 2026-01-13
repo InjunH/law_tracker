@@ -5,13 +5,15 @@ import Layout from '../components/Layout';
 import StatsCards from '../components/StatsCards';
 import MovementTable from '../components/MovementTable';
 import MovementChart from '../components/MovementChart';
-import AIAssistant from '../components/AIAssistant';
 import SystemMonitor from '../components/SystemMonitor';
 import FirmMovementSummary from '../components/FirmMovementSummary';
+import DirectoryPage from '../components/DirectoryPage';
+import MovementsPage from '../components/MovementsPage';
+import { fetchMovements, calculateDailyStats } from '../services/supabaseService';
 import { generateMockMovements, calculateStats } from '../services/mockDataService';
 import { MAJOR_FIRMS } from '../constants';
 import { Movement, DailyStats } from '../types';
-import { ChevronRight, Briefcase, Loader2, Sparkles, Scale, FileText } from 'lucide-react';
+import { Briefcase, Scale, FileText } from 'lucide-react';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -22,9 +24,27 @@ export default function HomePage() {
   useEffect(() => {
     const initData = async () => {
       setLoading(true);
-      const data = generateMockMovements(60);
-      setMovements(data);
-      setStats(calculateStats(data));
+      try {
+        // Supabase에서 실제 데이터 가져오기
+        const movementsData = await fetchMovements(60);
+
+        // 데이터가 없으면 mock 데이터 사용 (fallback)
+        if (movementsData.length === 0) {
+          console.log('No movements data found, using mock data');
+          const mockData = generateMockMovements(60);
+          setMovements(mockData);
+          setStats(calculateStats(mockData));
+        } else {
+          setMovements(movementsData);
+          setStats(calculateDailyStats(movementsData));
+        }
+      } catch (error) {
+        console.error('Failed to load data:', error);
+        // 에러 시 mock 데이터 사용
+        const mockData = generateMockMovements(60);
+        setMovements(mockData);
+        setStats(calculateStats(mockData));
+      }
       setLoading(false);
     };
     initData();
@@ -84,8 +104,6 @@ export default function HomePage() {
         </div>
 
         <div className="space-y-10">
-          <AIAssistant movements={movements} />
-
           <div className="bg-white rounded-xl p-8 border border-slate-200 shadow-sm">
             <h3 className="font-bold text-base text-slate-900 mb-8 flex items-center justify-between">
               실시간 인력 수급 랭킹
@@ -116,25 +134,6 @@ export default function HomePage() {
             </button>
           </div>
 
-          <div className="bg-slate-900 rounded-xl p-8 text-white relative shadow-2xl border border-slate-800">
-            <h3 className="font-bold text-base mb-6 flex items-center gap-3">
-              <div className="bg-amber-600 p-1.5 rounded-lg">
-                <Briefcase size={16} className="text-slate-900" />
-              </div>
-              <span className="tracking-tight">Exclusive Legal News</span>
-            </h3>
-            <div className="space-y-6">
-              {[
-                { title: '광장, 공정거래 부문 대규모 파트너급 보강 실시', date: '2026.01.13' },
-                { title: '15기 변호사 수습 종료에 따른 로펌별 채용 티오 분석', date: '2026.01.12' }
-              ].map((news, i) => (
-                <div key={i} className="group cursor-pointer">
-                  <p className="text-sm leading-relaxed font-bold text-slate-300 group-hover:text-amber-500 transition-colors">{news.title}</p>
-                  <p className="text-[10px] text-slate-600 font-bold mt-2 uppercase tracking-widest">{news.date} • INTERNAL REPORT</p>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -143,8 +142,10 @@ export default function HomePage() {
   return (
     <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
       {activeTab === 'dashboard' && renderDashboard()}
+      {activeTab === 'movements' && <MovementsPage initialMovements={movements} />}
       {activeTab === 'monitor' && <SystemMonitor />}
-      {activeTab !== 'dashboard' && activeTab !== 'monitor' && (
+      {activeTab === 'directory' && <DirectoryPage />}
+      {activeTab !== 'dashboard' && activeTab !== 'movements' && activeTab !== 'monitor' && activeTab !== 'directory' && (
         <div className="flex flex-col items-center justify-center h-[60vh] text-slate-300 animate-in fade-in duration-700">
           <div className="p-10 rounded-full border-2 border-slate-100 mb-8">
             <Briefcase size={48} className="text-slate-200" />
