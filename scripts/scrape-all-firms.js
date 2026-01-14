@@ -5,7 +5,13 @@
  * GitHub Actions Cron용 독립 실행 스크립트
  */
 
-require('dotenv').config();
+// 로컬 환경에서만 dotenv 사용 (GitHub Actions에서는 환경변수 이미 설정됨)
+try {
+  require('dotenv').config();
+} catch (e) {
+  // dotenv 없어도 계속 진행 (GitHub Actions 환경)
+}
+
 const { createClient } = require('@supabase/supabase-js');
 const { LawnbScraper } = require('../services/lawnbScraper');
 const { transformLawyersData, separateLawyerData, filterValidLawyers } = require('../services/dataTransformer');
