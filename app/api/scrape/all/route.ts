@@ -1,6 +1,7 @@
 /**
  * 전체 로펌 스크래핑 API
  * POST /api/scrape/all
+ * GET /api/scrape/all (Vercel Cron용)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -266,4 +267,9 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Vercel Cron을 위한 GET 핸들러 (POST와 동일한 로직 실행)
+export async function GET(request: NextRequest) {
+  return POST(request);
 }
