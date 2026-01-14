@@ -22,7 +22,7 @@ LAW TRACK은 대한민국 13개 주요 로펌(Tier 1~3)의 변호사 영입 및 
 - 👥 **변호사 명부**: 현재 활동 중인 변호사 검색 및 필터링
 - 🔍 **이동 히스토리**: 입사/퇴사/이직 내역 추적
 - 🤖 **AI 인사이트**: Google Gemini 기반 시장 분석
-- ⏰ **자동 스케줄러**: Vercel Cron으로 매일 자동 실행
+- ⏰ **자동 스케줄러**: GitHub Actions로 매일 자동 실행
 
 ---
 
@@ -93,7 +93,8 @@ LAW TRACK은 대한민국 13개 주요 로펌(Tier 1~3)의 변호사 영입 및 
 
 ### DevOps
 - **Hosting**: Vercel
-- **Scheduler**: Vercel Cron Jobs
+- **Scheduler**: GitHub Actions (매일 자동 스크래핑)
+- **CI/CD**: GitHub Actions Workflows
 - **Package Manager**: npm
 - **Linting**: ESLint
 - **Type Checking**: TypeScript Compiler
@@ -163,6 +164,9 @@ GROUP BY firm_name;
 
 ```
 law_tracker/
+├── .github/
+│   └── workflows/
+│       └── scrape-daily.yml     # GitHub Actions 워크플로우
 ├── app/
 │   ├── page.tsx                 # 메인 페이지 (라우팅 허브)
 │   ├── layout.tsx               # 루트 레이아웃
@@ -234,17 +238,33 @@ for (const firm of firmsToScrape) {
 }
 ```
 
-### 자동 스케줄러 (Vercel Cron)
-```json
-{
-  "crons": [{
-    "path": "/api/scrape/all",
-    "schedule": "0 0 * * *"
-  }]
-}
-```
-- **실행 시간**: 매일 UTC 00:00 (한국시간 오전 9시)
-- **소요 시간**: 평균 1-2분 (변동 없을 시), 변동 시 5-10분
+### 자동 스케줄러 (GitHub Actions)
+
+**⚠️ Vercel Cron은 Puppeteer를 지원하지 않으므로 GitHub Actions를 사용합니다.**
+
+#### 설정 방법
+
+1. **GitHub Secrets 등록**
+   - GitHub 저장소 → Settings → Secrets and variables → Actions
+   - 다음 2개 Secret 추가:
+     ```
+     NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+     SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+     ```
+
+2. **워크플로우 파일**
+   - 파일: `.github/workflows/scrape-daily.yml`
+   - 스케줄: `cron: '0 0 * * *'` (매일 UTC 00:00 = 한국시간 09:00)
+   - 수동 실행: GitHub Actions 탭 → "Daily Law Firm Scraping" → Run workflow
+
+3. **실행 정보**
+   - **실행 시간**: 매일 오전 9시 (한국시간)
+   - **소요 시간**: 평균 5-15분 (변동 없을 시), 변동 시 30-60분
+   - **실행 환경**: Ubuntu latest + Node.js 18 + Puppeteer
+
+4. **로그 확인**
+   - GitHub → Actions 탭 → 최근 워크플로우 실행 확인
+   - 각 단계별 상세 로그 제공
 
 ---
 
@@ -457,7 +477,7 @@ node scripts/check-duplicates.js
 - [x] Puppeteer 스크래핑 시스템
 - [x] 이동 감지 로직 (JOIN/LEAVE/TRANSFER)
 - [x] 스마트 스크래핑 (헤드카운트 체크)
-- [x] Vercel Cron 자동 스케줄러
+- [x] GitHub Actions 자동 스케줄러 (매일 자동 실행)
 - [x] Supabase 연동 (lawyers, lawyer_positions, movements)
 - [x] Google Gemini AI 통합
 - [x] **법인별 분석 페이지** (2026-01-13 추가)
