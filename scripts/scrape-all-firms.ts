@@ -147,11 +147,26 @@ async function scrapeAllFirms() {
 
         if (lawyersError) throw lawyersError;
 
-        const { error: positionsError } = await supabase
+        // 중복 방지: 현재 DB에 있는 재직자는 제외하고 신규 입사자만 insert
+        const { data: existingPositions } = await supabase
           .from('lawyer_positions')
-          .insert(positions);
+          .select('lawyer_sid')
+          .eq('firm_name', firmName)
+          .eq('is_current', true);
 
-        if (positionsError) throw positionsError;
+        const existingSids = new Set((existingPositions || []).map((p: { lawyer_sid: string }) => p.lawyer_sid));
+        const positionsToInsert = positions.filter(p => !existingSids.has(p.lawyer_sid));
+
+        if (positionsToInsert.length > 0) {
+          const { error: positionsError } = await supabase
+            .from('lawyer_positions')
+            .insert(positionsToInsert);
+
+          if (positionsError) throw positionsError;
+          console.log(`   💾 Inserted ${positionsToInsert.length} new positions`);
+        } else {
+          console.log(`   ℹ️  No new positions to insert`);
+        }
 
         // 이동 기록 저장
         if (movementResult.movements.length > 0) {
