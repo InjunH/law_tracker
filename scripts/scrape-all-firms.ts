@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env ts-node
 
 /**
  * 전체 로펌 스크래핑 스크립트
@@ -12,11 +12,11 @@ try {
   // dotenv 없어도 계속 진행 (GitHub Actions 환경)
 }
 
-const { createClient } = require('@supabase/supabase-js');
-const { LawnbScraper } = require('../services/lawnbScraper');
-const { transformLawyersData, separateLawyerData, filterValidLawyers } = require('../services/dataTransformer');
-const { HeadcountChecker } = require('../services/headcountChecker');
-const { MovementDetector } = require('../services/movementDetector');
+import { createClient } from '@supabase/supabase-js';
+import { LawnbScraper } from '../services/lawnbScraper';
+import { transformLawyersData, separateLawyerData, filterValidLawyers } from '../services/dataTransformer';
+import { HeadcountChecker } from '../services/headcountChecker';
+import { MovementDetector } from '../services/movementDetector';
 
 // 13개 주요 로펌 목록 (규모순)
 const MAJOR_FIRMS = [
@@ -74,7 +74,7 @@ async function scrapeAllFirms() {
 
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
-        console.error(`❌ Headcount check failed for ${firmName}:`, error.message);
+        console.error(`❌ Headcount check failed for ${firmName}:`, error instanceof Error ? error.message : error);
         headcountChecks.push({
           firmName,
           currentCount: 0,
@@ -199,11 +199,11 @@ async function scrapeAllFirms() {
         results.push({
           firmName,
           success: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           duration
         });
 
-        console.error(`❌ ${firmName}: ${error.message}`);
+        console.error(`❌ ${firmName}:`, error instanceof Error ? error.message : error);
       }
     }
 
@@ -224,8 +224,8 @@ async function scrapeAllFirms() {
     console.log(`   - Duration: ${(totalDuration / 1000 / 60).toFixed(1)} minutes\n`);
 
   } catch (error) {
-    console.error('❌ Fatal error:', error.message);
-    if (error.stack) {
+    console.error('❌ Fatal error:', error instanceof Error ? error.message : error);
+    if (error instanceof Error && error.stack) {
       console.error(error.stack);
     }
     process.exit(1);
@@ -233,6 +233,6 @@ async function scrapeAllFirms() {
 }
 
 scrapeAllFirms().catch(err => {
-  console.error('❌ Fatal error:', err.message);
+  console.error('❌ Fatal error:', err instanceof Error ? err.message : err);
   process.exit(1);
 });
